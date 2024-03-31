@@ -2,6 +2,11 @@
 
 好用点 star，幸福你我她～
 
+##你也可以使用io.py服务，更方便
+
+[iopy 服务可以阅读这里
+](https://github.com/titafox/io.sh/blob/main/iopy.md)
+
 ## 简介
 
 这是一个用于 IO.NET的自动化 Bash 脚本。它包括了一系列自动化任务，如环境检查、Docker 容器和镜像的管理、以及 IONET 二进制文件的启动。该脚本旨在简化 IONET 系统的部署和管理过程。尤其适合在国内挂梯子的情况下使用。
