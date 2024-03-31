@@ -1,51 +1,8 @@
-"""
-为了大家安装简单，本代码不需要安装任何第三方库，直接用ubuntu 22.04自带的python3运行即可。
-
-脚本支持三种模式：
-
-手动执行：直接运行 python3 io.py。
-
-计划任务执行：使用 --cron 参数来触发随机延迟，然后执行 run_launch_binary。
-加入到 crontab 中，每 6 小时执行一次
-0 */6 * * * /usr/bin/python3 /var/ionet/io.py
-
-HTTP 服务：使用 --http 参数来启动 HTTP 服务并等待 POST 请求,端口运行再 9700上
-
-## 随系统运行，创建一个系统服务
-
-1. 创建服务文件
-nano /etc/systemd/system/ionet.service
-
-[Unit]
-Description=IONET自动运维
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/python3 /var/ionet/io.py
-User=root
-Group=root
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-
-通过以下命令启动并激活服务：
-
-systemctl start ionet
-systemctl enable ionet
-
-通过以下命令检查服务状态：
-systemctl status ionet
-
-
-"""
-
 import socket
 import os
 import json
 from typing import Tuple
 import random
-import time
 import subprocess
 import uuid
 import requests
@@ -53,10 +10,16 @@ import argparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 import urllib.parse
+import time
+
 
 # 设置路径为你自己的各种乱七八糟跟 io 有关数据的存放路径
 PATH = "/var/ionet"
 
+def timed_execution(interval, function, args):
+    while True:
+        time.sleep(interval)
+        function(*args)
 
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -160,6 +123,7 @@ if __name__ == "__main__":
     if args.http:
         # 如果指定了 --http 参数，启动 HTTP 服务
         print(f"HTTP 服务器正在端口 9700 上运行。等待 device_name 验证...")
+        print(f"userid: {USER_ID}, deviceid: {DEVICE_ID}, devicename: {DEVICE_NAME}")
         server_thread = threading.Thread(target=start_server)
         server_thread.daemon = True
         server_thread.start()
@@ -167,5 +131,24 @@ if __name__ == "__main__":
     else:
         # 否则直接执行
         run_launch_binary(DEVICE_ID, USER_ID, DEVICE_NAME)
-        print("脚本执行完毕。")
+
+    if args.http:
+        # 如果指定了 --http 参数，启动 HTTP 服务
         print(f"HTTP 服务器正在端口 9700 上运行。等待 device_name 验证...")
+        print(f"userid: {USER_ID}, deviceid: {DEVICE_ID}, devicename: {DEVICE_NAME}")
+        server_thread = threading.Thread(target=start_server)
+        server_thread.daemon = True
+        server_thread.start()
+
+        # 启动定时执行线程，每隔 6 小时运行一次 run_launch_binary
+        timed_execution_thread = threading.Thread(
+            target=timed_execution,
+            args=(21600, run_launch_binary, (DEVICE_ID, USER_ID, DEVICE_NAME))
+        )
+        timed_execution_thread.daemon = True
+        timed_execution_thread.start()
+
+        # 等待 HTTP 服务器线程
+        server_thread.join()
+    else:
+        run_launch_binary(DEVICE_ID, USER_ID, DEVICE_NAME)
