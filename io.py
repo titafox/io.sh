@@ -13,6 +13,7 @@ import urllib.parse
 import time
 
 
+
 # 设置路径为你自己的各种乱七八糟跟 io 有关数据的存放路径
 PATH = "/var/ionet"
 
@@ -45,10 +46,16 @@ def start_server():
 
 
 def get_device_name() -> str:
-    """获取本地 IP 地址并转换为 DEVICE_NAME"""
-    hostname = socket.gethostname()
-    local_ip = socket.gethostbyname(hostname)
-    return local_ip.replace('.', '-')
+        try:
+            # 尝试连接一个外部地址（不实际发送数据），以确定活动的网络接口
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("114.114.114.114", 80))  # 使用Google的公共DNS地址作为目标
+            ip_address = s.getsockname()[0]
+            s.close()
+            return ip_address
+        except Exception:
+            # 如果出错，返回一个UUID
+            return str(uuid.uuid4())
 
 
 def read_device_info(io_conf: str, cmd_args: argparse.Namespace) -> Tuple[str, str]:
