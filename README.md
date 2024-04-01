@@ -48,7 +48,9 @@ wait
 bash <(wget -qO- -o- https://raw.githubusercontent.com/titafox/io.sh/main/io.sh)
 ```
 
-## 配置
+## 人肉安装
+
+### 配置
 将 ionet 脚本放置在 /var/ionet 目录下。
 
 确保脚本具有执行权限：
@@ -59,13 +61,13 @@ chmod +x /var/ionet/ionet.py
 如果需要，修改脚本中的相关配置，如 USER_ID 和 IO_CONF 路径。
 
 
-## 运行
+### 运行
 脚本可以通过以下方式运行：
 
 - 手动执行：直接在终端中运行 python3 /var/ionet/io.py。
 - 作为守护进程：通过 systemd 服务运行。
 
-### 设置为 Systemd 服务
+#### 设置为 Systemd 服务
 创建一个名为 ionet.service 的文件：
 ```bash
 nano /etc/systemd/system/ionet.service
@@ -96,8 +98,19 @@ systemctl status ionet
 ```
 
 ## 使用说明
+
+日常你可以直接进行手动重置：
+```bash
+python3 /var/ionet/io.py
+```
+
 脚本支持以下命令行参数：
 - --user_id 和 --device_id 作为可选参数。
+特别是在新配置服务的时候，可以通过这两个参数来指定用户 ID 和设备 ID，2 个可以单独使用，也可以一起使用。
+```bash
+python3 /var/ionet/io.py --user_id=123 --device_id=456
+```
+
 - 使用 --http 参数启动 HTTP 服务，该服务在端口 9700 上运行，并等待 device_name 验证。
   然后在浏览器输入如： http://192.168.20.25:9700/?device_name=192-168-20-25
 
@@ -111,4 +124,7 @@ systemctl status ionet
 
 ## 许可
 此项目采用 MIT 许可证。你可以随便搞。
+
+## 鸣谢
+该代码最初是由**亦度**分享了一个从配置读取配置的一个脚本得到的灵感。最初他定义了一个IO_CONF，我们保留了他。
 
