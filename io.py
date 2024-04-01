@@ -31,7 +31,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if received_device_name == DEVICE_NAME:
             self.send_response(200)
             self.end_headers()
-            self.wfile.write("设备 ID 验证成功。正在执行程序。".encode('utf-8'))
+            self.wfile.write(f"设备 ID 验证成功。正在执行程序。USER_ID:{USER_ID},DEVICE_ID:{DEVICE_ID},DEVICE_NAME:{DEVICE_NAME}".encode('utf-8'))
             run_launch_binary(DEVICE_ID, USER_ID, DEVICE_NAME)
         else:
             self.send_response(400)
@@ -135,6 +135,7 @@ if __name__ == "__main__":
     if args.http:
         # 如果指定了 --http 参数，启动 HTTP 服务
         print(f"HTTP 服务器正在端口 9700 上运行。等待 device_name 验证...")
+        print(f"使用http://你的ip地址:9700/?device_name={DEVICE_NAME} 验证设备 ID。")
         print(f"userid: {USER_ID}, deviceid: {DEVICE_ID}, devicename: {DEVICE_NAME}")
         server_thread = threading.Thread(target=start_server)
         server_thread.daemon = True
