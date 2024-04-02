@@ -1,4 +1,3 @@
-import socket
 import os
 import json
 from typing import Tuple
@@ -122,18 +121,6 @@ if __name__ == "__main__":
         USER_ID = input("请输入您的 io user_id: ")
     if not DEVICE_ID:
         DEVICE_ID = str(uuid.uuid4()).lower()
-
-    if args.http:
-        # 如果指定了 --http 参数，启动 HTTP 服务
-        print(f"HTTP 服务器正在端口 9700 上运行。等待 device_name 验证...")
-        print(f"userid: {USER_ID}, deviceid: {DEVICE_ID}, devicename: {DEVICE_NAME}")
-        server_thread = threading.Thread(target=start_server)
-        server_thread.daemon = True
-        server_thread.start()
-        server_thread.join()
-    else:
-        # 否则直接执行
-        run_launch_binary(DEVICE_ID, USER_ID, DEVICE_NAME)
 
     if args.http:
         # 如果指定了 --http 参数，启动 HTTP 服务
