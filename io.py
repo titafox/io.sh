@@ -1,7 +1,6 @@
 import os
 import json
 from typing import Tuple
-import random
 import subprocess
 import uuid
 import requests
@@ -11,15 +10,15 @@ import threading
 import urllib.parse
 import time
 
-
-
 # 设置路径为你自己的各种乱七八糟跟 io 有关数据的存放路径
 PATH = "/var/ionet"
+
 
 def timed_execution(interval, function, args):
     while True:
         time.sleep(interval)
         function(*args)
+
 
 class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -31,12 +30,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         if received_device_name == DEVICE_NAME:
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(f"设备 ID 验证成功。正在执行程序。USER_ID:{USER_ID},DEVICE_ID:{DEVICE_ID},DEVICE_NAME:{DEVICE_NAME}".encode('utf-8'))
+            self.wfile.write(
+                f"设备 ID 验证成功。正在执行程序。USER_ID:{USER_ID},DEVICE_ID:{DEVICE_ID},DEVICE_NAME:{DEVICE_NAME}".encode(
+                    'utf-8'))
             run_launch_binary(DEVICE_ID, USER_ID, DEVICE_NAME)
         else:
             self.send_response(400)
             self.end_headers()
             self.wfile.write("无效的设备 ID。".encode('utf-8'))
+
 
 def start_server():
     server_address = ('', 9700)
@@ -77,13 +79,16 @@ def download_and_prepare() -> None:
         subprocess.run(["chmod", "+x", "launch_binary_linux"])
 
 
-def run_launch_binary(device_id: str, user_id: str, device_name: str) -> None:
+def run_launch_binary(device_id: str, user_id: str, device_name: str, images=None) -> None:
     """运行 launch_binary_linux 命令"""
-
-    """停止并移除所有 Docker 容器和镜像"""
-    subprocess.run("docker stop $(docker ps -aq); docker rm $(docker ps -aq); docker rmi $(docker images -q)",
-                   shell=True)
-
+    if images == "del":
+        """停止并移除所有 Docker 容器和镜像"""
+        subprocess.run("docker stop $(docker ps -aq); docker rm $(docker ps -aq); docker rmi $(docker images -q)",
+                       shell=True)
+    else:
+        """不删镜像"""
+        subprocess.run("docker stop $(docker ps -aq); docker rm $(docker ps -aq)",
+                       shell=True)
     # 检查是否已经下载并准备好了二进制文件
     download_and_prepare()
     # 执行命令
@@ -102,7 +107,7 @@ parser = argparse.ArgumentParser(description="IONET 脚本")
 parser.add_argument("--user_id", help="指定用户 ID", type=str)
 parser.add_argument("--device_id", help="指定设备 ID", type=str)
 parser.add_argument("--http", help="启动 HTTP 服务", action="store_true")
-parser.add_argument("--cron", help="为计划任务执行随机延迟", action="store_true")
+parser.add_argument("--launch", help="run_launch_binary", action="store_true")
 args = parser.parse_args()
 
 # 环境变量设置
@@ -111,10 +116,11 @@ DEVICE_NAME: str = get_device_name()
 
 # 脚本主逻辑
 if __name__ == "__main__":
-    # 随机延迟逻辑
-    if args.cron:
-        delay = random.randint(0, 360) * 5
-        time.sleep(delay)
+    """
+    如果指定 http  则在 9700 端口上运行一个 http 服务，并且每隔24小时自动运行一遍 run_launch_binary 并删除所有 docker 镜像
+    如果指定 launch 则运行一次 run_launch_binary 并且删除所有 docker 镜像
+    否则运行一次 run_launch_binary 不删除 docker 镜像
+    """
 
     DEVICE_ID, USER_ID = read_device_info(IO_CONF, args)
     if not USER_ID:
@@ -131,7 +137,7 @@ if __name__ == "__main__":
         server_thread.daemon = True
         server_thread.start()
 
-        # 启动定时执行线程，每隔 6 小时运行一次 run_launch_binary
+        # 启动定时执行线程，每隔 6 小时运行一次 run_launch_binary，不删除镜像
         timed_execution_thread = threading.Thread(
             target=timed_execution,
             args=(21600, run_launch_binary, (DEVICE_ID, USER_ID, DEVICE_NAME))
@@ -139,7 +145,19 @@ if __name__ == "__main__":
         timed_execution_thread.daemon = True
         timed_execution_thread.start()
 
+        # 启动定时执行线程，每隔 24 小时运行一次 run_launch_binary，并删除镜像
+        timed_execution_thread = threading.Thread(
+            target=timed_execution,
+            args=(86400, run_launch_binary, (DEVICE_ID, USER_ID, DEVICE_NAME, 'del'))  # 注意添加 'del' 参数
+        )
+        timed_execution_thread.daemon = True
+        timed_execution_thread.start()
+
         # 等待 HTTP 服务器线程
         server_thread.join()
+    elif args.launch:
+        # 如果指定了 --launch 参数，运行 run_launch_binary，并删除镜像
+        run_launch_binary(DEVICE_ID, USER_ID, DEVICE_NAME, images='del')
     else:
+        # 否则直接运行 run_launch_binary，不删镜像
         run_launch_binary(DEVICE_ID, USER_ID, DEVICE_NAME)
