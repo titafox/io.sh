@@ -5,4 +5,5 @@ IONET快捷运维项目已经停止维护，第二期项目我们只跑少量机
 
 ### pingpong 项目的一键部署
 
+wget https://raw.githubusercontent.com/titafox/io.sh/main/pp.sh && chmod +x pp.sh
 bash pp.sh key-key-key
