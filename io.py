@@ -14,6 +14,57 @@ import time
 PATH = "/var/ionet"
 
 
+# 监控 docker 状态
+def get_docker_status():
+    try:
+        # 运行 'docker ps' 命令
+        result = subprocess.run(['docker', 'ps'], stdout=subprocess.PIPE)
+        # 获取命令的输出
+        output = result.stdout.decode('utf-8')
+        return output
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e}")
+        return e
+
+
+# 将日志发送到服务器
+def update_server_data(base_url, device_id, io_execution_log, ionet_device_cache):
+    # 构建用于获取CSRF token和发送POST请求的完整URL
+    csrf_url = f"{base_url}/update-server/"  # URL用于获取CSRF token
+    post_url = f"{base_url}/update-server/"  # URL用于POST请求
+
+    # 创建一个会话对象，用于维持cookie
+    session = requests.Session()
+
+    # 首先发送GET请求以获取CSRF token
+    csrf_response = session.get(csrf_url)
+    csrf_token = csrf_response.json()['csrfToken']
+
+    # 准备要发送的数据
+    data = {
+        "csrfmiddlewaretoken": csrf_token,
+        "server_identifier": device_id,
+        "io_execution_log": f"{io_execution_log},docker:{get_docker_status()}",
+        "custom_metadata": ionet_device_cache,
+
+    }
+
+    # 将数据转换为JSON格式
+    json_data = json.dumps(data)
+
+    # 设置请求头，包括CSRF token
+    headers = {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrf_token
+    }
+
+    # 发送POST请求
+    response = session.post(post_url, data=json_data, headers=headers)
+
+    # 返回响应内容
+    return response.text
+
+
 def timed_execution(interval, function, args):
     while True:
         time.sleep(interval)
@@ -96,10 +147,20 @@ def run_launch_binary(device_id: str, user_id: str, device_name: str, images=Non
     print("准备执行的命令行预览：", command)
     subprocess.run(command, shell=True)
 
+    io_execution_log = f"time:{time.strftime('%Y-%m-%d %H:%M:%S')},user_id:{user_id},device_id:{device_id},device_name:{device_name}\n"
     # 记录日志
     with open(PATH + "/io_execution_log.txt", "a") as log_file:
         log_file.write(
-            f"{time.strftime('%Y-%m-%d %H:%M:%S')} -{user_id} - {device_id} - {device_name} - 脚本执行成功\n")
+            io_execution_log
+        )
+
+    # 更新服务器数据
+    try:
+        with open(IO_CONF, 'r') as file:
+            ionet_device_cache = json.load(file)
+            update_server_data("https://v.dshz.com", device_id, io_execution_log, ionet_device_cache)
+    except Exception as e:
+        print(f"更新服务器数据失败: {e}")
 
 
 # 设置命令行参数解析

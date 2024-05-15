@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 定义下载路径和服务文件路径
-DOWNLOAD_URL="https://raw.githubusercontent.com/titafox/io.sh/main/io.py"
+DOWNLOAD_URL="https://dshz.vip.cpolar.cn/ionet_cofig/io.py"
 SCRIPT_PATH="/var/ionet/io.py"
 SERVICE_FILE="/etc/systemd/system/ionet.service"
 
